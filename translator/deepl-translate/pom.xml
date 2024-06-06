@@ -25,7 +25,7 @@
         <version>23.9.3-SNAPSHOT</version>
     </parent>
 
-    <artifactId>tock-deepl-translate</artifactId>
+    <artifactId>tock-translator-deepl</artifactId>
     <name>Tock Deepl Translator</name>
     <description>Deepl translator implementation</description>
 

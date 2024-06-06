@@ -1,4 +1,5 @@
-import ai.tock.DeeplTranslatorEngine
+import ai.tock.translator.deepl.DeeplTranslatorEngine
+import org.junit.jupiter.api.Disabled
 import org.junit.jupiter.api.Test
 import java.util.Locale
 import kotlin.test.assertEquals
@@ -19,16 +20,57 @@ import kotlin.test.assertEquals
  * limitations under the License.
  */
 
+/**
+ * All these tests are disabled because it uses Deepl pro api that can be expensive
+ */
 class DeeplTranslateIntegrationTest {
     @Test
+    @Disabled
     fun simpleTest() {
-        val result = DeeplTranslatorEngine.translate("Bonjour, je voudrais me rendre à New-York Mardi prochain", Locale.FRENCH, Locale.ENGLISH)
-        assertEquals("Hello, I would like to go to New York next Tuesday.",result)
+        val result = DeeplTranslatorEngine.translate(
+            "Bonjour, je voudrais me rendre à New-York Mardi prochain",
+            Locale.FRENCH,
+            Locale.ENGLISH
+        )
+        assertEquals("Hello, I would like to go to New York next Tuesday.", result)
     }
 
     @Test
+    @Disabled
+    fun testWithEmoticonAndAntislash() {
+        val result = DeeplTranslatorEngine.translate("Bonjour, je suis l'Agent virtuel SNCF Voyageurs! \uD83E\uDD16\n" +
+                    "Je vous informe sur l'état du trafic en temps réel.\n" +
+                    "Dites-moi par exemple \"Mon train 6111 est-il à l'heure ?\", \"Aller à Saint-Lazare\", \"Prochains départs Gare de Lyon\" ...",
+            Locale.FRENCH,
+            Locale.ENGLISH
+        )
+
+        assertEquals("Hello, I'm the SNCF Voyageurs Virtual Agent! \uD83E\uDD16\n" +
+                "I inform you about traffic conditions in real time.\n" +
+                "Tell me for example \"Is my train 6111 on time?\", \"Going to Saint-Lazare\", \"Next departures Gare de Lyon\" ...",
+            result
+        )
+    }
+
+    @Test
+    @Disabled
     fun testWithParameters() {
-        val result = DeeplTranslatorEngine.translate("Bonjour, je voudrais me rendre à {:city} {:date}", Locale.FRENCH, Locale.GERMAN)
-        assertEquals("Hallo, ich möchte nach {:city} {:date} reisen",result)
+        val result = DeeplTranslatorEngine.translate(
+            "Bonjour, je voudrais me rendre à {:city} {:date}",
+            Locale.FRENCH,
+            Locale.GERMAN
+        )
+        assertEquals("Hallo, ich möchte nach {:city} {:date} reisen", result)
+    }
+
+    @Test
+    @Disabled
+    fun testWithHTML() {
+        val result = DeeplTranslatorEngine.translate(
+            "Bonjour, je voudrais me rendre à Paris <br><br/> demain soir",
+            Locale.FRENCH,
+            Locale.GERMAN
+        )
+        assertEquals("Hallo, ich möchte morgen Abend nach Paris <br><br/> fahren", result)
     }
 }

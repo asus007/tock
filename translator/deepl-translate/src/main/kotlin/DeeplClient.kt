@@ -14,14 +14,16 @@
  * limitations under the License.
  */
 
-package ai.tock
+package ai.tock.translator.deepl
 import okhttp3.MediaType.Companion.toMediaTypeOrNull
 import okhttp3.OkHttpClient
 import okhttp3.Request
 import okhttp3.RequestBody.Companion.toRequestBody
 import com.squareup.moshi.Moshi
 import com.squareup.moshi.kotlin.reflect.KotlinJsonAdapterFactory
+import mu.KotlinLogging
 import java.io.IOException
+import java.util.regex.Pattern
 
 data class TranslationResponse(
     val translations: List<Translation>
@@ -32,24 +34,58 @@ data class Translation(
 )
 
 val DEEPL_URL_API = "https://api.deepl.com/v2/translate"
+val TAG_HANDLING = "xml"
 
 class DeeplClient(private val apiKey: String) {
     private val client = OkHttpClient()
     private val moshi = Moshi.Builder().add(KotlinJsonAdapterFactory()).build()
     private val jsonAdapter = moshi.adapter(TranslationResponse::class.java)
 
-    fun translate(text: String, sourceLang: String,targetLang: String): String? {
-        // TODO Pass placeholders options in parameters
-        val textWithTags = text.replace("{", "<x>").replace("}", "</x>")
+    private val logger = KotlinLogging.logger {}
 
-        val requestBody = """
-            text=$textWithTags&source_lang=$sourceLang&target_lang=$targetLang&tag_handling=xml&non_translatable_tags=x
-        """.trimIndent().toRequestBody("application/x-www-form-urlencoded".toMediaTypeOrNull())
+    private fun replaceSpecificPlaceholders(text: String): Pair<String, List<String>> {
+        // Store original placeholders for later restoration
+        val placeholderPattern = Pattern.compile("\\{:([^}]*)}")
+        val matcher = placeholderPattern.matcher(text)
+
+        val placeholders = mutableListOf<String>()
+        while (matcher.find()) {
+            placeholders.add(matcher.group(1))
+        }
+
+        // Replace placeholders with '_PLACEHOLDER_'
+        val replacedText = matcher.replaceAll("_PLACEHOLDER_")
+
+        return Pair(replacedText, placeholders)
+    }
+
+    private fun revertSpecificPlaceholders(text: String, placeholders: List<String>): String {
+        var resultText = text
+        for (placeholder in placeholders) {
+            resultText = resultText.replaceFirst("_PLACEHOLDER_", "{:$placeholder}")
+        }
+        return resultText
+    }
+
+    fun translate(text: String, sourceLang: String,targetLang: String,preserveFormatting: Boolean,glossaryId:String?): String? {
+        val (textWithPlaceholders, originalPlaceholders) = replaceSpecificPlaceholders(text)
+
+        val requestBody = buildString {
+            append("text=$textWithPlaceholders")
+            append("&source_lang=$sourceLang")
+            append("&target_lang=$targetLang")
+            append("&preserve_formatting=$preserveFormatting")
+            append("&tag_handling=$TAG_HANDLING")
+
+            if (glossaryId != "default") {
+                append("&glossary=$glossaryId")
+            }
+        }
 
         val request = Request.Builder()
             .url(DEEPL_URL_API)
             .addHeader("Authorization", "DeepL-Auth-Key $apiKey")
-            .post(requestBody)
+            .post(requestBody.trimIndent().toRequestBody("application/x-www-form-urlencoded".toMediaTypeOrNull()))
             .build()
 
         client.newCall(request).execute().use { response ->
@@ -59,7 +95,7 @@ class DeeplClient(private val apiKey: String) {
             val translationResponse = jsonAdapter.fromJson(responseBody!!)
 
             val translatedText = translationResponse?.translations?.firstOrNull()?.text
-            return translatedText?.replace("<x>", "{")?.replace("</x>", "}")
+            return translatedText?.let { revertSpecificPlaceholders(it,originalPlaceholders) }
         }
     }
 }

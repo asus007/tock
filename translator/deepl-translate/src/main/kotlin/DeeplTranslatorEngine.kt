@@ -14,20 +14,25 @@
  * limitations under the License.
  */
 
-package ai.tock
+package ai.tock.translator.deepl
 
 import ai.tock.shared.property
 import ai.tock.translator.TranslatorEngine
+import mu.KotlinLogging
 import org.apache.commons.text.StringEscapeUtils
 import java.util.Locale
 
 internal object DeeplTranslatorEngine : TranslatorEngine {
 
-    private val deeplClient = DeeplClient(property ("tock_deepl_api_key", "default"))
+    private val logger = KotlinLogging.logger {}
+
+    private val deeplClient = DeeplClient(property ("tock_translator_deepl_api_key", "default"))
+    private val glossaryId = property ("tock_translator_deepl_glossaryId", "default")
     override val supportAdminTranslation: Boolean = true
 
     override fun translate(text: String, source: Locale, target: Locale): String {
-        val translatedText = deeplClient.translate(text, source.language, target.language)
+        logger.debug("Try to translate text using deepl")
+        val translatedText = deeplClient.translate(text, source.language, target.language,true,glossaryId)
         return StringEscapeUtils.unescapeHtml4(translatedText)
     }
 }
